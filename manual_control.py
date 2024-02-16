@@ -31,9 +31,11 @@ parser.add_argument("--frame-skip", default=1, type=int, help="number of frames 
 parser.add_argument("--seed", default=1, type=int, help="seed")
 args = parser.parse_args()
 
-if args.env_name and args.env_name.find("Duckietown") != -1:
+if args.env_name and (args.env_name == 'MultiMap-v0' or args.env_name.find("Duckietown") != -1):
+    print(f'Using the environment: {args.env_name}')
     env = gym.make(args.env_name)
 else:
+    print(f'Using the map: {args.map_name}')
     env = DuckietownEnv(
         seed=args.seed,
         map_name=args.map_name,
