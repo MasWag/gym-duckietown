@@ -537,6 +537,7 @@ class Simulator(gym.Env):
 
         # Robot's current speed
         self.speed = 0.0
+        self.velocity_vector = np.zeros(3)
 
         if self.randomize_maps_on_reset:
             map_name = self.np_random.choice(self.map_names)
@@ -1547,6 +1548,7 @@ class Simulator(gym.Env):
     cur_pose: np.ndarray
     cur_angle: float
     speed: float
+    velocity_vector: np.ndarray
 
     def update_physics(self, action, delta_time: float = None):
         # print("updating physics")
@@ -1566,6 +1568,7 @@ class Simulator(gym.Env):
         # Compute the robot's speed
         delta_pos = self.cur_pos - prev_pos
         self.speed = np.linalg.norm(delta_pos) / delta_time
+        self.velocity_vector = delta_pos / delta_time
 
         # Update world objects
         for obj in self.objects:
@@ -1651,7 +1654,7 @@ class Simulator(gym.Env):
         gz = GH * tile_size - cp[1]
         return [gx, gy, gz], angle
 
-    def compute_reward(self, pos, angle, speed):
+    def compute_reward(self, pos, angle, velocity):
         # Compute the collision avoidance penalty
         col_penalty = self.proximity_penalty2(pos, angle)
 
@@ -1663,7 +1666,7 @@ class Simulator(gym.Env):
         else:
 
             # Compute the reward
-            reward = +5.0 * speed * lp.dot_dir + -10 * np.abs(lp.dist) + +40 * col_penalty
+            reward = +5.0 * velocity * lp.dot_dir + -10 * np.abs(lp.dist) + +40 * col_penalty
         return reward
 
     def step(self, action: np.ndarray):
@@ -1699,7 +1702,9 @@ class Simulator(gym.Env):
             done_code = "max-steps-reached"
         else:
             done = False
-            reward = self.compute_reward(self.cur_pos, self.cur_angle, self.speed)
+            angle_vector = np.asarray([np.cos(self.cur_angle), 0, -np.sin(self.cur_angle)])
+            velocity = np.vdot(angle_vector, self.velocity_vector)
+            reward = self.compute_reward(self.cur_pos, self.cur_angle, velocity)
             msg = ""
             done_code = "in-progress"
         return DoneRewardInfo(done=done, done_why=msg, reward=reward, done_code=done_code)
